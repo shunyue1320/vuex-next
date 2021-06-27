@@ -1,3 +1,5 @@
+import { forEachValue } from "../utils"
+
 export default class Module {
   constructor(rawModule) {
     this._raw = rawModule,
@@ -9,5 +11,8 @@ export default class Module {
   }
   getChild(key) {
     return this._children[key]
+  }
+  forEachChild(fn) {
+    forEachValue(this._children, fn)
   }
 }

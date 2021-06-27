@@ -5,6 +5,15 @@ import ModuleCollection from './module/module-collection'
 
 function installModule(store, rootState, path, module) {
   let isRoot = !path.length
+
+  if (!isRoot) {
+    let parentState = path.slice(0, -1).reduce((state, key) => state[key], rootState)
+    parentState[path[path.length - 1]] = module.state
+  }
+
+  module.forEachChild((child, key) => {
+    installModule(store, rootState, path.concat(key), child)
+  })
 }
 
 // 创建容器返回一个 store
@@ -13,10 +22,10 @@ export default class Store {
     const store = this
     // 格式化配置
     store._modules = new ModuleCollection(options)
-    console.log("111111111112", store._modules)
 
     const state = store._modules.root.state
     installModule(store, state, [], store._modules.root)
+    console.log("state=---", state)
   }
 
   install(app, injectKey = storeKey) {

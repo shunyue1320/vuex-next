@@ -30,6 +30,17 @@ const store = createStore({
         add(state, payload) {
           state.count += payload
         }
+      },
+      modules: {
+        cCount: {
+          namespaced: true,
+          state: { count: 0 },
+          mutations: {
+            add(state, payload) {
+              state.count += payload
+            }
+          }
+        }
       }
     },
     bCount: {
