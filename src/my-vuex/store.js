@@ -4,8 +4,7 @@ import { storeKey } from './injectKey'
 import ModuleCollection from './module/module-collection'
 
 function installModule(store, rootState, path, module) {
-  let isRoot = path.length
-  
+  let isRoot = !path.length
 }
 
 // 创建容器返回一个 store
