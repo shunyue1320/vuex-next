@@ -3,6 +3,7 @@ import { forEachValue } from './utils'
 import { storeKey } from './injectKey'
 import ModuleCollection from './module/module-collection'
 
+
 function installModule(store, rootState, path, module) {
   let isRoot = !path.length
 
