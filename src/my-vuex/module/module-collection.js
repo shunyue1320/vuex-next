@@ -22,6 +22,13 @@ export default class ModuleCollection {
       this.register(rawChildModule, path.concat(key))
     })
   }
+  getNamespaced(path) {
+    let module = this.root
+    return path.reduce((namespacedStr, key) => {
+      module = module.getChild(key)
+      return namespacedStr + (module.namespaced ? key + '/' : '')
+    }, '')
+  }
   // register(rootModule, path) {
   //   const _children = {}
   //   const isModules = rootModule.modules

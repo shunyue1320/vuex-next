@@ -8,8 +8,10 @@ function getNestedState(state, path) { // 根据路径获取 store 上面的最�
 }
 
 function installModule(store, rootState, path, module) {
-  console.log("path", path)
   let isRoot = !!path.length
+
+  // const namespaced = store._modules.getNamespaced(path)
+  // console.log("namespaced0---", namespaced)
 
   if (isRoot) {
     let parentState = path.slice(0, -1).reduce((state, key) => state[key], rootState)
@@ -35,7 +37,7 @@ function installModule(store, rootState, path, module) {
   module.forEachAction((action, key) => {
     const entry = store._actions[key] || (store._actions[key] = [])
     entry.push((payload) => { // stroe.commit('add', payload)
-      action.call(store, store, payload)
+      const res = action.call(store, store, payload)
       // 判断是否为 promise
       if (!isPromise(res)) {
         return Promise.resolve(res)
@@ -53,10 +55,10 @@ function resetStoreState(store, state) {
   store._state = reactive({ data: state })
   const wrappedGetters = store._wrappedGetters
   store.getters = {}
-  forEachValue(wrappedGetters, (getters, key) => {
-    Object.defineProperty(store, getters, key, {
+  forEachValue(wrappedGetters, (getter, key) => {
+    Object.defineProperty(store.getters, key, {
       enumerable: true,
-      get: getters // computed 缓存
+      get: getter // computed 缓存
     })
   })
 }
@@ -75,10 +77,21 @@ export default class Store {
     const state = store._modules.root.state
     installModule(store, state, [], store._modules.root)
     resetStoreState(store, state)
+    console.log("store-----", store)
   }
 
   get state() {
     return this._state.data
+  }
+
+  commit = (type, payload) => {
+    const entry = this._mutations[type] || []
+    entry.forEach(handler => handler(payload))
+  }
+
+  dispatch = (type, payload) => {
+    const entry = this._actions[type] || []
+    return Promise.all(entry.map(handler => handler(payload)))
   }
 
   install(app, injectKey = storeKey) {
