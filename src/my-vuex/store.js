@@ -1,18 +1,63 @@
 import { reactive } from 'vue'
-import { forEachValue } from './utils'
+import { forEachValue, isPromise } from './utils'
 import { storeKey } from './injectKey'
 import ModuleCollection from './module/module-collection'
 
-function installModule(store, rootState, path, module) {
-  let isRoot = !path.length
+function getNestedState(state, path) { // 根据路径获取 store 上面的最新状态
+  return path.reduce((state, key) => state[key], state)
+}
 
-  if (!isRoot) {
+function installModule(store, rootState, path, module) {
+  console.log("path", path)
+  let isRoot = !!path.length
+
+  if (isRoot) {
     let parentState = path.slice(0, -1).reduce((state, key) => state[key], rootState)
     parentState[path[path.length - 1]] = module.state
   }
 
+  // getters module._raw.getters
+  module.forEachGetter((getter, key) => {
+    store._wrappedGetters[key] = function () {
+      return getter(getNestedState(store.state, path))
+    }
+  })
+
+  // mutation { add: [fn, fn, fn ]}
+  module.forEachMutation((mutation, key) => {
+    const entry = store._mutations[key] || (store._mutations[key] = [])
+    entry.push((payload) => { // stroe.commit('add', payload)
+      mutation.call(store, getNestedState(store.state, path), payload)
+    })
+  })
+
+  // actions (mutation 与 actions 的区别，action 执行后返回一个 promise)
+  module.forEachAction((action, key) => {
+    const entry = store._actions[key] || (store._actions[key] = [])
+    entry.push((payload) => { // stroe.commit('add', payload)
+      action.call(store, store, payload)
+      // 判断是否为 promise
+      if (!isPromise(res)) {
+        return Promise.resolve(res)
+      }
+      return res
+    })
+  })
+
   module.forEachChild((child, key) => {
     installModule(store, rootState, path.concat(key), child)
+  })
+}
+
+function resetStoreState(store, state) {
+  store._state = reactive({ data: state })
+  const wrappedGetters = store._wrappedGetters
+  store.getters = {}
+  forEachValue(wrappedGetters, (getters, key) => {
+    Object.defineProperty(store, getters, key, {
+      enumerable: true,
+      get: getters // computed 缓存
+    })
   })
 }
 
@@ -22,10 +67,18 @@ export default class Store {
     const store = this
     // 格式化配置
     store._modules = new ModuleCollection(options)
+    // { add: [fn, fn, fn]} 发布订阅
+    store._wrappedGetters = Object.create(null)
+    store._mutations = Object.create(null)
+    store._actions = Object.create(null)
 
     const state = store._modules.root.state
     installModule(store, state, [], store._modules.root)
-    console.log("state=---", state)
+    resetStoreState(store, state)
+  }
+
+  get state() {
+    return this._state.data
   }
 
   install(app, injectKey = storeKey) {
@@ -37,7 +90,7 @@ export default class Store {
 
 
 /*
-// 格式化配置
+// store 格式化配置
 root = {
   _raw: rootModule,
   state: rootModule.state,
@@ -54,6 +107,9 @@ root = {
     },
   }
 }
+
+// state 格式化配置
+
 */
 
 
