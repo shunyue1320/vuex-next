@@ -17,15 +17,23 @@ const store = createStore({
   },
   actions: {
     asyncAdd({ commit }, payload) {
-      setTimeout(() => {
-        commit('add', payload)
-      }, 1000)
+      return new Promise((resolve, reject) => {
+        setTimeout(() => {
+          commit('add', payload)
+          resolve()
+        }, 1000)
+      })
     }
   },
   modules: {  // 子模块 实现逻辑拆分
     aCount: {
       namespaced: true,
       state: { count: 0 },
+      getters: {
+        double(state) {
+          return state.count * 2
+        }
+      },
       mutations: {
         add(state, payload) {
           state.count += payload
@@ -35,6 +43,11 @@ const store = createStore({
         cCount: {
           namespaced: true,
           state: { count: 0 },
+          getters: {
+            double2(state) {
+              return state.count * 2
+            }
+          },
           mutations: {
             add(state, payload) {
               state.count += payload
@@ -46,6 +59,11 @@ const store = createStore({
     bCount: {
       namespaced: true,
       state: { count: 0 },
+      getters: {
+        double(state) {
+          return state.count * 2
+        }
+      },
       mutations: {
         add(state, payload) {
           state.count += payload
