@@ -1,4 +1,4 @@
-import { reactive } from 'vue'
+import { reactive, watch } from 'vue'
 import { forEachValue, isPromise } from './utils'
 import { storeKey } from './injectKey'
 import ModuleCollection from './module/module-collection'
@@ -8,34 +8,36 @@ function getNestedState(state, path) { // 根据路径获取 store 上面的最�
 }
 
 function installModule(store, rootState, path, module) {
-  let isRoot = !!path.length
+  let notRoot = !!path.length
 
-  // const namespaced = store._modules.getNamespaced(path)
-  // console.log("namespaced0---", namespaced)
+  const namespaced = store._modules.getNamespaced(path)
+  console.log("namespaced0---", namespaced)
 
-  if (isRoot) {
-    let parentState = path.slice(0, -1).reduce((state, key) => state[key], rootState)
-    parentState[path[path.length - 1]] = module.state
+  if (notRoot) {
+    let parentState = path.slice(0, -1).reduce((state, key) => state[key], rootState) // 遍历获取到最内的 state
+    store._withCommit(() => {
+      parentState[path[path.length - 1]] = module.state
+    })
   }
 
   // getters module._raw.getters
   module.forEachGetter((getter, key) => {
-    store._wrappedGetters[key] = function () {
+    store._wrappedGetters[namespaced + key] = function () {
       return getter(getNestedState(store.state, path))
     }
   })
 
-  // mutation { add: [fn, fn, fn ]}
+  // _mutations { add: [fn, fn, fn ]}
   module.forEachMutation((mutation, key) => {
-    const entry = store._mutations[key] || (store._mutations[key] = [])
+    const entry = store._mutations[namespaced + key] || (store._mutations[namespaced + key] = [])
     entry.push((payload) => { // stroe.commit('add', payload)
       mutation.call(store, getNestedState(store.state, path), payload)
     })
   })
 
-  // actions (mutation 与 actions 的区别，action 执行后返回一个 promise)
+  // _actions (mutation 与 actions 的区别，action 执行后返回一个 promise)
   module.forEachAction((action, key) => {
-    const entry = store._actions[key] || (store._actions[key] = [])
+    const entry = store._actions[namespaced + key] || (store._actions[namespaced + key] = [])
     entry.push((payload) => { // stroe.commit('add', payload)
       const res = action.call(store, store, payload)
       // 判断是否为 promise
@@ -61,6 +63,16 @@ function resetStoreState(store, state) {
       get: getter // computed 缓存
     })
   })
+  if (store.strict) {
+    enableStrictMode(store)
+  }
+}
+
+function enableStrictMode(store) {
+  // 监控数据变化 执行回调
+  watch(() => store._state.data, () => {
+    console.assert(store._commiting, '在 mutation 外不能更改 vuex state')
+  }, { deep: true, flush: 'sync'}) // 深度监控 watch默认异步 改成 同步
 }
 
 // 创建容器返回一个 store
@@ -73,25 +85,61 @@ export default class Store {
     store._wrappedGetters = Object.create(null)
     store._mutations = Object.create(null)
     store._actions = Object.create(null)
+    this.strict = options.strict || false // 是否严格模式
+    this._commiting = false
 
     const state = store._modules.root.state
     installModule(store, state, [], store._modules.root)
     resetStoreState(store, state)
-    console.log("store-----", store)
+    
+    // plugins
+    store._subscribers = []
+    options.plugins.forEach(plugin => plugin(store))
   }
-
+  subscribe = (fn) => {
+    this._subscribers.push(fn)
+  }
+  replaceState(newState) {
+    // 避免触发严格模式警告
+    this._withCommit(() => {
+      this._state.data = newState
+    })
+  }
+  
   get state() {
     return this._state.data
   }
 
   commit = (type, payload) => {
     const entry = this._mutations[type] || []
-    entry.forEach(handler => handler(payload))
+    this._withCommit(() => {
+      entry.forEach(handler => handler(payload))
+    })
+    this._subscribers.forEach(sub => sub({type, payload}, this.state))
   }
 
   dispatch = (type, payload) => {
     const entry = this._actions[type] || []
     return Promise.all(entry.map(handler => handler(payload)))
+  }
+  _withCommit(fn) {
+    const commiting = this._commiting
+    this._commiting = true
+    fn()
+    this._commiting = commiting
+  }
+  registerModule(path, rawModule) {
+    const store = this
+    if (typeof path == 'string') {
+      path = [path]
+    }
+    // 在原有的模块的基础上新增加模块
+    const newModule = store._modules.register(rawModule, path)
+    // 模块安装上
+    installModule(store, store.state, path, newModule)
+    // 重置容器
+    resetStoreState(store, store.state)
+    console.log("store_", store)
   }
 
   install(app, injectKey = storeKey) {
@@ -122,7 +170,18 @@ root = {
 }
 
 // state 格式化配置
-
+state = {
+  "count": 0,
+  "aCount": {
+    "count": 0,
+    "cCount": {
+      "count": 0
+    }
+  },
+  "bCount": {
+    "count": 0
+  }
+}
 */
 
 

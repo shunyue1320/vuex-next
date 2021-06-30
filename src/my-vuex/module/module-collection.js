@@ -21,6 +21,8 @@ export default class ModuleCollection {
     rawModule.modules && forEachValue(rawModule.modules, (rawChildModule, key) => {
       this.register(rawChildModule, path.concat(key))
     })
+
+    return newModule
   }
   getNamespaced(path) {
     let module = this.root
