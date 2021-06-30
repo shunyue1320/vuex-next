@@ -8,6 +8,7 @@ function getNestedState(state, path) { // 根据路径获取 store 上面的最�
 }
 
 function installModule(store, rootState, path, module) {
+<<<<<<< HEAD
   let notRoot = !!path.length
 
   const namespaced = store._modules.getNamespaced(path)
@@ -18,6 +19,16 @@ function installModule(store, rootState, path, module) {
     store._withCommit(() => {
       parentState[path[path.length - 1]] = module.state
     })
+=======
+  let isRoot = !!path.length
+
+  // const namespaced = store._modules.getNamespaced(path)
+  // console.log("namespaced0---", namespaced)
+
+  if (isRoot) {
+    let parentState = path.slice(0, -1).reduce((state, key) => state[key], rootState)
+    parentState[path[path.length - 1]] = module.state
+>>>>>>> cab92e6f24afe498a9c4090324d3e8197dfa5e9c
   }
 
   // getters module._raw.getters
@@ -91,10 +102,14 @@ export default class Store {
     const state = store._modules.root.state
     installModule(store, state, [], store._modules.root)
     resetStoreState(store, state)
+<<<<<<< HEAD
     
     // plugins
     store._subscribers = []
     options.plugins.forEach(plugin => plugin(store))
+=======
+    console.log("store-----", store)
+>>>>>>> cab92e6f24afe498a9c4090324d3e8197dfa5e9c
   }
   subscribe = (fn) => {
     this._subscribers.push(fn)
@@ -112,16 +127,21 @@ export default class Store {
 
   commit = (type, payload) => {
     const entry = this._mutations[type] || []
+<<<<<<< HEAD
     this._withCommit(() => {
       entry.forEach(handler => handler(payload))
     })
     this._subscribers.forEach(sub => sub({type, payload}, this.state))
+=======
+    entry.forEach(handler => handler(payload))
+>>>>>>> cab92e6f24afe498a9c4090324d3e8197dfa5e9c
   }
 
   dispatch = (type, payload) => {
     const entry = this._actions[type] || []
     return Promise.all(entry.map(handler => handler(payload)))
   }
+<<<<<<< HEAD
   _withCommit(fn) {
     const commiting = this._commiting
     this._commiting = true
@@ -141,6 +161,8 @@ export default class Store {
     resetStoreState(store, store.state)
     console.log("store_", store)
   }
+=======
+>>>>>>> cab92e6f24afe498a9c4090324d3e8197dfa5e9c
 
   install(app, injectKey = storeKey) {
     // vue3 的 provide 方法给根 app 增加一个 _provides, 让子组件向上查找
