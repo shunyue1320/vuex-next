@@ -53,7 +53,6 @@ const store = createStore({
           state.count += payload
         }
       },
-<<<<<<< HEAD
       actions: {
         asyncAdd1({ commit }, payload) {
           return new Promise((resolve, reject) => {
@@ -62,22 +61,6 @@ const store = createStore({
               resolve()
             }, 1000)
           })
-=======
-      modules: {
-        cCount: {
-          namespaced: true,
-          state: { count: 0 },
-          getters: {
-            double2(state) {
-              return state.count * 2
-            }
-          },
-          mutations: {
-            add(state, payload) {
-              state.count += payload
-            }
-          }
->>>>>>> cab92e6f24afe498a9c4090324d3e8197dfa5e9c
         }
       },
       // modules: {
