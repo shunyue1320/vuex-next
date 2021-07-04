@@ -25,15 +25,21 @@
     }
 
     // 当前路由值
-    function createCurrentLocation() {
+    function createCurrentLocation(base) {
       const { pathname, search, hash } = window.location
+
+      const hasPos = base.indexOf('#')  // 哈希
+
+      if (hasPos > -1) {
+        return base.slice(1) || '/'
+      }
       return pathname + search + hash
     }
 
     // 开启历史路由导航
-    function useHistoryStateNavigation() {
+    function useHistoryStateNavigation(base) {
       const currentLocation = {
-        value: createCurrentLocation()
+        value: createCurrentLocation(base)
       }
       const historyState = {
         value: window.history.state 
@@ -45,8 +51,10 @@
       }
       // 跳转更新状态
       function changeLocation(to, state, replace) {
-          window.history[replace ? 'replaceState' : 'pushState'](state, null, to)
-          historyState.value = state // 将自己生成的状态同步到路由系统中
+        const hasPos = base.indexOf('#')
+        const url = hasPos > -1 ? base + to : to;
+        window.history[replace ? 'replaceState' : 'pushState'](state, null, url)
+        historyState.value = state // 将自己生成的状态同步到路由系统中
       }
 
       // 为什么 changeLocation 两次， 目的是有一个跳转的过程 实现 befor 钩子
@@ -94,10 +102,10 @@
     }
 
     // 监听 
-    function useHistoryListeners(historyState, currentLocation) {
+    function useHistoryListeners(base, historyState, currentLocation) {
       let listeners = []
       const PopStateHandler = ({state}) => {
-        const to = createCurrentLocation()   // 去哪
+        const to = createCurrentLocation(base)   // 去哪
         const from = currentLocation.value   // 从哪来
         const fromState = historyState.value // 从哪来状态
 
@@ -122,10 +130,10 @@
       }
     }
 
-    function createWebHistory() {
-      const historyNavigation = useHistoryStateNavigation()
+    function createWebHistory(base = '') {
+      const historyNavigation = useHistoryStateNavigation(base)
       // 监听浏览器前进后退
-      const historyListeners = useHistoryListeners(historyNavigation.state, historyNavigation.location)
+      const historyListeners = useHistoryListeners(base, historyNavigation.state, historyNavigation.location)
       
       const routerHistory = Object.assign({}, historyNavigation, historyListeners)
         
@@ -140,7 +148,11 @@
       return routerHistory
     }
 
-    const routerHistory = createWebHistory()
+    function createWebHashHistory() {
+      return createWebHistory('#')
+    }
+    const routerHistory = createWebHashHistory();
+    // const routerHistory = createWebHistory()
     routerHistory.listen((to, from, { isBack }) => {
       console.log(to, from, isBack)
     })
