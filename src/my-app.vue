@@ -1,4 +1,14 @@
 <template>
+  <div id="nav">
+    <router-link to="/">Home</router-link> |
+    <router-link to="/about">About</router-link>
+  </div>
+  <router-view></router-view>
+
+  <hr style="margin: 50px 0">
+
+
+
   <div> count: {{ count }} | double: {{ double }} </div>
   <hr>
   <!-- $store 是挂载到实例上，兼容 vue2 用的 -->

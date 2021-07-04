@@ -11,7 +11,7 @@ function installModule(store, rootState, path, module) {
   let notRoot = !!path.length
 
   const namespaced = store._modules.getNamespaced(path)
-  console.log("namespaced0---", namespaced)
+  // console.log("namespaced0---", namespaced)
 
   if (notRoot) {
     let parentState = path.slice(0, -1).reduce((state, key) => state[key], rootState) // 遍历获取到最内的 state
