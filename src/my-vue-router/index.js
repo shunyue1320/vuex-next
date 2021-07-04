@@ -54,7 +54,10 @@ function createRouterMatcher(routes) {
   }
 
   routes.forEach(route => addRoute(route))
-  console.log("matchers", matchers)
+  
+  return {
+    addRoute // 动态的添加路由
+  }
 }
 
 
@@ -73,6 +76,10 @@ function createRouter(options) {
       app.component('RouterView', {
         setup: (props, { slots }) => () => <div>11</div>
       })
+
+      // 解析路径
+
+      // 页面的钩子
     }
   }
 
