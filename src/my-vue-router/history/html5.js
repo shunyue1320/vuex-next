@@ -117,8 +117,9 @@ function useHistoryListeners(base, historyState, currentLocation) {
 }
 
 export function createWebHistory(base = '') {
+  // 前进后退： 维护浏览器前进后退路由导航键
   const historyNavigation = useHistoryStateNavigation(base)
-  // 监听浏览器前进后退
+  // 监听：监听浏览器前进后退
   const historyListeners = useHistoryListeners(base, historyNavigation.state, historyNavigation.location)
   
   const routerHistory = Object.assign({}, historyNavigation, historyListeners)

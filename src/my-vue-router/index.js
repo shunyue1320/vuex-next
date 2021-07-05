@@ -1,6 +1,6 @@
 import { createWebHistory } from './history/html5'
 import { createWebHashHistory } from './history/hash'
-
+import { ref, shallowRef, computed, reactive, unref } from 'vue'
 
 // 格式化用户参数
 function normalizeRouteRecord(record) {
@@ -56,26 +56,81 @@ function createRouterMatcher(routes) {
   routes.forEach(route => addRoute(route))
   
   return {
+    resolve,
     addRoute // 动态的添加路由
   }
 }
 
 
+const START_LOCATION_NORMALIZED = { // 初始化路由系统中的默认参数
+  path: '/',
+  // params: {}, // 路径参数
+  // query: {},
+  matched: [], // 当前路径匹配到的记录
+}
+
 function createRouter(options) {
+  // 路由系统 { location: 路径, state: 状态, push, replace, listen: 钩子 }
   const routerHistory = options.history
   
   // '/a' => { A, parent: Home }  先渲染父级 后渲染子集
-
   const matcher = createRouterMatcher(options.routes)
 
+  // 响应式 + 计算属性 （改变 value 更新视图）
+  const currentRoute = shallowRef(START_LOCATION_NORMALIZED)
+
+  function resolve(to) {
+    if (typeof to === 'string') {
+      matcher.resolve({path: to})
+    } else {
+      matcher.resolve(to)
+    }
+  }
+  function pushWithRedirect(to) {
+    const targetLocation = resolve(to)
+    const from = currentRoute.value
+    // 钩子 路由拦截
+    
+  }
+  function push(to) {
+    return pushWithRedirect(to)
+  }
+
   const router = {
+    push,
+    replace() {
+
+    },
     install(app) {
+      const router = this;
+      app.config.globalProperties.$router = router
+      // 响应式取值
+      Object.defineProperty(app.config.globalProperties, '$route', {
+        enumerable: true,
+        get: () => unref(currentRoute)
+      })
+
+      const reactiveRoute = {}
+      for (let key in START_LOCATION_NORMALIZED) {
+        reactiveRoute[key] = computed(() => currentRoute.value[key])
+      }
+
+      // 暴露出去
+      app.provide('router', router) // 暴露方法
+      app.provide('route location', reactive(reactiveRoute)) //暴露属性 reactive包裹后 不需要.value
+
+
       app.component('RouterLink', {
         setup: (props, { slots }) => () => <a>{ slots.default && slots.default() }</a>
       })
       app.component('RouterView', {
         setup: (props, { slots }) => () => <div>11</div>
       })
+
+      if (reactiveRoute.value == START_LOCATION_NORMALIZED) {
+        // 默认就是初始化
+        push(routerHistory.location)
+      }
 
       // 解析路径
 

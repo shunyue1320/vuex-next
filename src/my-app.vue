@@ -33,6 +33,14 @@ import { useStore } from '@/my-vuex'
 export default {
   name: 'App',
   setup() {
+
+    console.log(this.$router)
+    console.log(this.$route)
+
+
+
+
+
     const store = useStore()
     console.log("store", store)
 
