@@ -52,8 +52,24 @@ function createRouterMatcher(routes) {
 
     matchers.push(matcher) 
   }
-
   routes.forEach(route => addRoute(route))
+
+  // 解析路径与对应的组件 { path: '/a', matched: [Home, A] }
+  function resolve(location) {
+    const matched = []
+    const path =  location.path
+    let matcher = matchers.find(m => m.path === path)
+
+    while (matcher) {
+      matched.unshift(matcher.record)
+      matcher = matcher.parent
+    }
+
+    return {
+      path,
+      matched
+    }
+  }
   
   return {
     resolve,
@@ -79,20 +95,31 @@ function createRouter(options) {
   // 响应式 + 计算属性 （改变 value 更新视图）
   const currentRoute = shallowRef(START_LOCATION_NORMALIZED)
 
-  function resolve(to) {
+  function resolve(to) { // 标准化 to
     if (typeof to === 'string') {
-      matcher.resolve({path: to})
+      return matcher.resolve({path: to}) // 解析路径 组件
     } else {
-      matcher.resolve(to)
+      return matcher.resolve(to)
     }
   }
+  function finalizeNavigetion(to, from) {
+    if (from === START_LOCATION_NORMALIZED) { // 第一次加载页面
+      routerHistory.replace(to.path)
+    } else {
+      routerHistory.push(to.path)
+    }
+    currentRoute.value = to // 更新当前路径
+  }
   function pushWithRedirect(to) {
-    const targetLocation = resolve(to)
+    const targetLocation = resolve(to) // { path: '/a', matched: [Home, A] }
     const from = currentRoute.value
     // 钩子 路由拦截
     
+    // 根据第一次是 replace
+    finalizeNavigetion(targetLocation, from)
   }
   function push(to) {
+    console.log("targetLocation2", targetLocation)
     return pushWithRedirect(to)
   }
 
@@ -109,7 +136,6 @@ function createRouter(options) {
         enumerable: true,
         get: () => unref(currentRoute)
       })
-
       const reactiveRoute = {}
       for (let key in START_LOCATION_NORMALIZED) {
         reactiveRoute[key] = computed(() => currentRoute.value[key])
@@ -127,7 +153,9 @@ function createRouter(options) {
         setup: (props, { slots }) => () => <div>11</div>
       })
 
+      console.log("reactiveRoute.value", reactiveRoute.value)
       if (reactiveRoute.value == START_LOCATION_NORMALIZED) {
+        console.log("reactiveRoute.22", reactiveRoute.value)
         // 默认就是初始化
         push(routerHistory.location)
       }

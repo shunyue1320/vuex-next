@@ -32,10 +32,11 @@ import { useStore } from '@/my-vuex'
 
 export default {
   name: 'App',
-  setup() {
-
+  mounted() {
     console.log(this.$router)
     console.log(this.$route)
+  },
+  setup() {
 
 
 
