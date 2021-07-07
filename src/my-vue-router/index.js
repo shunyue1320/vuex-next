@@ -1,81 +1,9 @@
 import { createWebHistory } from './history/html5'
 import { createWebHashHistory } from './history/hash'
 import { ref, shallowRef, computed, reactive, unref } from 'vue'
-
-// 格式化用户参数
-function normalizeRouteRecord(record) {
-  return {
-    path: record.path, // 状态机 解析路径的分数 算出匹配规则
-    meta: record.meta || {},
-    name: record.name,
-    components: {
-      default: record.component
-    },
-    beforeEnter: record.beforeEnter,
-    children: record.children || []
-  }
-}
-
-// 创造匹配记录 构建父子关系
-function createRouteRecordMatcher(record, parent) {
-  // 修改 path 正则情况
-  const matcher = {
-    path: record.path,
-    record,
-    parent,
-    children: []
-  }
-
-  if (parent) {
-    parent.children.push(matcher)
-  }
-
-  return matcher
-}
-
-// 树的遍历
-function createRouterMatcher(routes) {
-  const matchers = []
-
-  function addRoute(route, parent) {
-    let normalizeRecord = normalizeRouteRecord(route)
-    if (parent) { // 加上父级的路径
-      normalizeRecord.path = parent.path + normalizeRecord.path
-    }
-    const matcher = createRouteRecordMatcher(normalizeRecord, parent)
-    if ('children' in normalizeRecord) {
-      let children = normalizeRecord.children
-      for (let i = 0; i < children.length; i++) {
-        addRoute(children[i], matcher) // 父级给到子集
-      }
-    }
-
-    matchers.push(matcher) 
-  }
-  routes.forEach(route => addRoute(route))
-
-  // 解析路径与对应的组件 { path: '/a', matched: [Home, A] }
-  function resolve(location) {
-    const matched = []
-    const path =  location.path
-    let matcher = matchers.find(m => m.path === path)
-
-    while (matcher) {
-      matched.unshift(matcher.record)
-      matcher = matcher.parent
-    }
-
-    return {
-      path,
-      matched
-    }
-  }
-  
-  return {
-    resolve,
-    addRoute // 动态的添加路由
-  }
-}
+import { RouterLink } from './router-link'
+import { RouterView } from './router-view'
+import { createRouterMatcher } from './matcher'
 
 
 const START_LOCATION_NORMALIZED = { // 初始化路由系统中的默认参数
@@ -102,13 +30,29 @@ function createRouter(options) {
       return matcher.resolve(to)
     }
   }
-  function finalizeNavigetion(to, from) {
-    if (from === START_LOCATION_NORMALIZED) { // 第一次加载页面
+  let ready = false // 标记第一次渲染完毕
+  function markAsReady() {
+    if (ready) {
+      return
+    }
+    ready = true
+
+    routerHistory.listen((to) => { // 添加路由加监听 浏览器前进后退按钮
+      const targetLocation = resolve(to)
+      const from = currentRoute.value
+      finalizeNavigetion(targetLocation, from, true) // 改变自实现的路由  replace 模式
+    })
+  }
+  function finalizeNavigetion(to, from, replace) {
+    if (from === START_LOCATION_NORMALIZED || replace) { // 第一次加载页面
       routerHistory.replace(to.path)
     } else {
       routerHistory.push(to.path)
     }
     currentRoute.value = to // 更新当前路径
+    console.log("currentRoute", currentRoute.value)
+    
+    markAsReady() // 初始化监听 listen 监听浏览器前进后退按钮 改变 currentRoute
   }
   function pushWithRedirect(to) {
     const targetLocation = resolve(to) // { path: '/a', matched: [Home, A] }
@@ -119,7 +63,6 @@ function createRouter(options) {
     finalizeNavigetion(targetLocation, from)
   }
   function push(to) {
-    console.log("targetLocation2", targetLocation)
     return pushWithRedirect(to)
   }
 
@@ -146,12 +89,8 @@ function createRouter(options) {
       app.provide('route location', reactive(reactiveRoute)) //暴露属性 reactive包裹后 不需要.value
 
 
-      app.component('RouterLink', {
-        setup: (props, { slots }) => () => <a>{ slots.default && slots.default() }</a>
-      })
-      app.component('RouterView', {
-        setup: (props, { slots }) => () => <div>11</div>
-      })
+      app.component('RouterLink', RouterLink)
+      app.component('RouterView', RouterView)
 
       console.log("reactiveRoute.value", reactiveRoute.value)
       if (reactiveRoute.value == START_LOCATION_NORMALIZED) {
