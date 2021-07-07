@@ -37,10 +37,23 @@ export default {
     console.log(this.$router)
     console.log(this.$route)
   },
+  beforeRouteEnter(to, from, next) {
+    console.log('-beforeRouteEnter', to, from, next)
+  },
+  beforeRouteUpdate(to, from, next) {
+    console.log('-beforeRouteUpdate', to, from, next)
+  },
+  beforeRouteLeave(to, from, next) {
+    console.log('-beforeRouteLeave', to, from, next)
+  },
+  // 路由切换时组件钩子
+  // a beforeRouteLeave (beforeRouteUpdate)
+  // b beforeEach
+  // b beforeEnter
+  // b beforeRouteEnter
+  // b beforeResolve
+  // b afterEach
   setup() {
-
-
-
 
 
     const store = useStore()

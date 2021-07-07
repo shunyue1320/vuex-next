@@ -13,6 +13,17 @@ const START_LOCATION_NORMALIZED = { // 初始化路由系统中的默认参数
   matched: [], // 当前路径匹配到的记录
 }
 
+function useCallback() {
+  const handlers = []
+  function add(handlers) {
+    handlers.push(handlers)
+  }
+
+  return {
+    add
+  }
+}
+
 function createRouter(options) {
   // 路由系统 { location: 路径, state: 状态, push, replace, listen: 钩子 }
   const routerHistory = options.history
@@ -22,6 +33,11 @@ function createRouter(options) {
 
   // 响应式 + 计算属性 （改变 value 更新视图）
   const currentRoute = shallowRef(START_LOCATION_NORMALIZED)
+
+  // 钩子订阅
+  const beforeGuards = useCallback();
+  const beforeResolveGuards = useCallback();
+  const afterGuards = useCallback();
 
   function resolve(to) { // 标准化 to
     if (typeof to === 'string') {
@@ -68,9 +84,10 @@ function createRouter(options) {
 
   const router = {
     push,
-    replace() {
-
-    },
+    replace() {},
+    beforeEach, // （发布订阅） 可以注册多个
+    beforeResolve,
+    aftarEach,
     install(app) {
       const router = this;
       app.config.globalProperties.$router = router
