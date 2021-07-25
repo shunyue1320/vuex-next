@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <div>11111111</div>
+  <script>
+    // (后退，当前， 前进，替换，滚动条)
+    function buildState(back, current, forward, replace = false, computedScroll = false) {
+      return {
+        back,
+        current,
+        forward,
+        replace,
+        scroll: computedScroll ? { left: window.pageXOffset, top: window.pageYOffset } : null,
+        postition: window.history.length - 1
+      }
+    }
+
+    function createCurrentLocation() {
+      const { pathname, search, hash } = window.location
+      return pathname + search + hash
+    }
+    
+    function useHistoryStateNavigation() {
+      const currentLocation = {
+        value: createCurrentLocation()
+      }
+      const historyState = {
+        value: window.history.state
+      }
+
+      // 初始没有就去创造一个state
+      if (!historyState.value) {
+        changeLocation(
+          currentLocation.value, 
+          buildState(null, currentLocation.value, null, true),
+          true
+        )
+      }
+
+      // 操作 window.history 并存储 state
+      function changeLocation(to, state, replace) {
+        window.history[replace ? 'replaceState': 'pushState'](state, null, to)
+        historyState.value = state
+      }
+
+      function push() {
+        const state = Object.assign()
+      }
+      function replace() {
+
+      }
+    }
+    
+    function createWebHistory() {
+      const historyNavigation = useHistoryStateNavigation()
+    }
+    
+    
+    const history = createWebHistory()
+  </script>
+</body>
+</html>

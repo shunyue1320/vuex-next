@@ -20,7 +20,8 @@ function useCallback() {
   }
 
   return {
-    add
+    add,
+    list: () => handlers
   }
 }
 

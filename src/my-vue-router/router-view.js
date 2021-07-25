@@ -16,10 +16,10 @@ export const RouterView = {
       const viewComponent = matchRoute && matchRoute.components.default
       console.log("matchRoute", matchRoute)
       if (!viewComponent) {
-        return slots.default && slots.default
+        return slots.default && slots.default()
       }
 
-      return h(viewComponent)
+      return h(viewComponent) // 子 <router-view /> 在这里面
     }
   }
 }

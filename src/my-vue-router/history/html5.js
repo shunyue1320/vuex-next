@@ -6,7 +6,7 @@ function buildState(back, current, forward, replace = false, computedScroll = fa
     forward,
     replace,
     scroll: computedScroll ? { left: window.pageXOffset, top: window.pageYOffset } : null,
-    position: window.history.length - 1 // 默认是2 因为浏览器初始重定向跳转了一次
+    postition: window.history.length - 1 // 默认是2 因为浏览器初始重定向跳转了一次
   }
 }
 
@@ -60,7 +60,7 @@ function useHistoryStateNavigation(base) {
     const state = Object.assign(
       {},
       buildState(currentLocation.value, to, null),
-      { position: currentState.position + 1 },
+      { postition: currentState.postition + 1 },
       data
     )
     // 再次跳转 真正的刷新页面 pushState
@@ -99,7 +99,7 @@ function useHistoryListeners(base, historyState, currentLocation) {
     historyState.value = state
 
     // 判断 前进 还是 后退
-    let isBack = state.position < fromState.position
+    let isBack = state.postition < fromState.postition
     
     // 这里扩展钩子。。。
     listeners.forEach(listener => {
@@ -107,7 +107,7 @@ function useHistoryListeners(base, historyState, currentLocation) {
     })
   }
   window.addEventListener('popstate', PopStateHandler); // popstate 只能监听浏览器的前进后退键
-
+ 
   function listen(cb) {
     listeners.push(cb)
   }
