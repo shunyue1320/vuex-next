@@ -15,14 +15,61 @@ const START_LOCATION_NORMALIZED = { // 初始化路由系统中的默认参数
 
 function useCallback() {
   const handlers = []
-  function add(handlers) {
-    handlers.push(handlers)
+  function add(handler) {
+    handlers.push(handler)
   }
 
   return {
     add,
     list: () => handlers
   }
+}
+
+function extractChangeRecords(to, from) {
+  const leavingRecords = [], updatingRecords = [], enteringRecords = [];
+  const len = Math.max(to.matched.length, from.matched.length)
+
+  for (let i = 0; i < len; i++) {
+    const recordFrom = from.matched[i];
+    if (recordFrom) {
+      if (to.matched.find(record => record.path == recordFrom.path)) {
+        updatingRecords.push(recordFrom)
+      } else {
+        leavingRecords.push(recordFrom)
+      }
+    }
+    const recordTo = to.matched[i];
+    if (recordTo) {
+      if (!from.matched.find(record => record.path == recordTo.path)) {
+        enteringRecords.push(recordTo)
+      }
+    }
+  }
+
+  return [leavingRecords, updatingRecords, enteringRecords]
+}
+function guardToPromise(guard, to, from, record) {
+  return () => new Promise((resolve, reject) => {
+    const next = () => resolve()
+    let guardReturn = guard.call(record, to, from, next)
+    Promise.resolve(guardReturn).then(next) // 没有调用 next 通过 then 调用
+  })
+}
+
+function extractComponentsGuards(matched, guradType, to, from) {
+  const guards = []
+  for (const record of matched) {
+    let rawComponent = record.components.default
+    const guard = rawComponent[guradType]
+    // 钩子串联 pormise
+    guard && guards.push(guardToPromise(guard, to, from, record))
+  }
+  return guards
+}
+
+// promise 组合函数
+function runGuardQueue(guards) { // [ fn() => promise, fn() => promise ]
+  return guards.reduce((promise, guard) => promise.then(() => guard()), Promise.resolve())
 }
 
 function createRouter(options) {
@@ -71,13 +118,71 @@ function createRouter(options) {
     
     markAsReady() // 初始化监听 listen 监听浏览器前进后退按钮 改变 currentRoute
   }
+
+  async function navigate(to, from) {
+    // 进入组件 离开组件 更新组件
+    const [ leavingRecords, updatingRecords, enteringRecords ] = extractChangeRecords(to, from)
+    // 钩子执行顺序
+    let guards = extractComponentsGuards( // 离开
+      leavingRecords.reverse(), // 倒叙
+      'beforeRouteLeave',
+      to,
+      from
+    )
+
+    return runGuardQueue(guards).then(() => {
+      guards = []
+      for (const guard of beforeGuards.list()) {
+        guards.push(guardToPromise(guard, to, from, guard))
+      }
+      return runGuardQueue(guards)
+    }).then(() => {
+      guards = extractComponentsGuards( // 更新
+        updatingRecords,
+        'beforeRouteUpdate',
+        to,
+        from
+      )
+      return runGuardQueue(guards)
+    }).then(() => {
+      guards = []
+      for (const record of to.matched) {
+        if (record.beforeEnter) {
+          guards.push(guardToPromise(record.beforeEnter, to, from, record))
+        }
+      }
+      return runGuardQueue(guards)
+    }).then(() => {
+      guards = extractComponentsGuards( // 更新
+        enteringRecords,
+        'beforeRouteEnter',
+        to,
+        from
+      )
+      return runGuardQueue(guards)
+    }).then(() => {
+      guards = []
+      for (const guard of beforeResolve.list()) {
+        guards.push(guardToPromise(guard, to, from, guard))
+      }
+      return runGuardQueue(guards)
+    })
+  }
+
   function pushWithRedirect(to) {
     const targetLocation = resolve(to) // { path: '/a', matched: [Home, A] }
     const from = currentRoute.value
-    // 钩子 路由拦截
     
-    // 根据第一次是 replace
-    finalizeNavigetion(targetLocation, from)
+    // 生命周期钩子 路由拦截
+    navigate(targetLocation, from).then(() => {
+      // 根据第一次是 replace
+      return finalizeNavigetion(targetLocation, from)
+    }).then(() => {
+      // 导航切换完毕执行 afterEach
+      for (const guard of afterGuards.list()) {
+        guard(to, from)
+      }
+    })
   }
   function push(to) {
     return pushWithRedirect(to)
@@ -86,9 +191,9 @@ function createRouter(options) {
   const router = {
     push,
     replace() {},
-    beforeEach, // （发布订阅） 可以注册多个
-    beforeResolve,
-    aftarEach,
+    beforeEach: beforeGuards.add, // （发布订阅） 可以注册多个
+    beforeResolve: beforeResolveGuards.add,
+    afterEach: afterGuards.add,
     install(app) {
       const router = this;
       app.config.globalProperties.$router = router
