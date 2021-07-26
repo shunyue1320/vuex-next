@@ -5,7 +5,14 @@ import { RouterLink } from './router-link'
 import { RouterView } from './router-view'
 import { createRouterMatcher } from './matcher'
 
-
+// currentRoute = { path: '' , matched: [第一层<<router-view>组件A, 第二层<router-view>组件B ] }
+// currentRoute => 核心就是已 START_LOCATION_NORMALIZED 为模板的一个响应式对象
+// 当浏览器 url 改变时就会触发 matcher 内的方法去遍历 path 找到对应的<router-view>组件数组 matched
+// 触发 matcher 方法是通过监听浏览器路由前进后退键 与 vue-router 内的路由的 push replace 等方法 
+// 因为 provide 存入 currentRoute 是通过 computed 获取，与 reactive 存储响应式的
+// 所以<router-view>组件就能通过 inject 响应式获取 matched 的值从而使路由组件响应式更新
+// createWebHistory 负责记住上一页下一页的 path 等属性
+// 路由钩子就是将函数存数组里，通过新旧 url 对比判断哪些组件 更新 卸载 新增 来执行对应钩子后再改变 matched
 const START_LOCATION_NORMALIZED = { // 初始化路由系统中的默认参数
   path: '/',
   // params: {}, // 路径参数
